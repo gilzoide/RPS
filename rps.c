@@ -10,7 +10,8 @@
 #define BGhelp 11
 
 #define HELP_WIDTH 31
-
+#define CHOICES_y0 (LINES/2 - 3)
+#define CHOICES_x0 (COLS/2 - 20)
 /*
   ____
 _/  __)_____
@@ -211,6 +212,8 @@ void PrintPaper (WINDOW *win, int y, int x, char reverse)
 		mvwaddstr (win, y + 4, x, "       _____)");
 		mvwaddstr (win, y + 5, x, "__________)");
 	}
+	wattrset (win, A_BOLD);
+	mvwaddstr (win, y + 7, x, "    PAPER");
 
 	wrefresh (win);
 }
@@ -235,6 +238,8 @@ void PrintScissors (WINDOW *win, int y, int x, char reverse)
 		mvwaddstr (win, y + 4, x, "   (___)");
 		mvwaddstr (win, y + 5, x, "___(__)");
 	}
+	wattrset (win, A_BOLD);
+	mvwaddstr (win, y + 7, x, "   SCISSORS");
 
 	wrefresh (win);
 }
@@ -250,6 +255,7 @@ void PrintRock (WINDOW *win, int y, int x, char reverse)
 		mvwaddstr (win, y + 3, x, "     (__)");
 		mvwaddstr (win, y + 4, x, "   __(__)");
 		mvwaddstr (win, y + 5, x, "  (__________");
+
 	}
 	else {
 		mvwaddstr (win, y, x,     "  ____");
@@ -259,10 +265,48 @@ void PrintRock (WINDOW *win, int y, int x, char reverse)
 		mvwaddstr (win, y + 4, x, "    (__)__");
 		mvwaddstr (win, y + 5, x, "__________)");
 	}
+	wattrset (win, A_BOLD);
+	mvwaddstr (win, y + 7, x, "    ROCK");
 
 	wrefresh (win);
 }
 
+
+/* Create the choices window, that's shown for player to choose his move */
+WINDOW *CreateChoices (int color)
+{
+	WINDOW *win;
+
+	win = newwin (8, 42, CHOICES_y0, CHOICES_x0);
+
+	wattrset (win, COLOR_PAIR (color) | A_BOLD);
+	PrintRock (win, 0, 0, 0);
+	wattrset (win, COLOR_PAIR (color) | A_BOLD);
+	PrintPaper (win, 0, 14, 0);
+	wattrset (win, COLOR_PAIR (color) | A_BOLD);
+	PrintScissors (win, 0, 28, 0);
+
+	return win;
+}
+
+
+/* Get the movement by mouse click */
+char MouseChoose (WINDOW *choices, MEVENT event)
+{
+	if (event.x >= CHOICES_x0 + 28)
+		return 's';
+	else if (event.x >= CHOICES_x0 + 14)
+		return 'p';
+	else
+		return 'r';
+}
+
+
+/* Who won? Who's next? */
+void Game (char c)
+{
+
+}
 
 
 
@@ -271,7 +315,9 @@ int main ()
 	char choice;	// 'R'ock, 'P'aper or 'S'cissors
 	unsigned int best_of = 0;
 	int color, c;
-	WINDOW *hud, *player, *cpu;
+	PANEL *panel;
+	WINDOW *hud, *player, *cpu, *choices;
+	MEVENT event;
 
 	srand (time (NULL));
 
@@ -316,15 +362,35 @@ int main ()
 
 	move (6, 0);
 	clrtobot ();
+	refresh ();
+
+	choices = CreateChoices (color);
+	panel = new_panel (choices);
 
 	while (c != 'q') {
 		c = getch ();
+
+		if (c == KEY_MOUSE) {
+			getmouse (&event);
+			if (event.bstate & BUTTON1_CLICKED) {
+// asked for help?
+				if (wenclose (hud, event.y, event.x) && event.x < 9)
+					c = '?';
+// choose a movement; will you win?
+				else if (wenclose (choices, event.y, event.x))
+					c = MouseChoose (choices, event);
+			}
+		}
 
 		switch (c) {
 			case '?':
 				Help ();
 				break;
+
+			case 'r': case 's': case 'p':
+				Game (c);
 		}
+		addch (c);
 	}
 
 	endwin ();
