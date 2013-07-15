@@ -4,69 +4,52 @@
 #include <panel.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 #include <string.h>
 
 #define BGhud 10
 #define BGhelp 11
 
 #define HELP_WIDTH 31
-#define CHOICES_y0 (LINES/2 - 3)
+#define CHOICES_y0 (LINES/2 - 5)
 #define CHOICES_x0 (COLS/2 - 20)
 #define PLAYER_x0 10
 #define CPU_x0 (COLS - 26)
+
+int player_score = 0, cpu_score = 0;	// scores
 /*
-  ____
-_/  __)_____
-       _____)
-       ______)
-       _____)
-__________)
+  ____			        ____
+_/  __)_____	  _____(__  \_
+       _____)	 (_____
+       ______)	(______
+       _____)	 (_____
+__________)		   (__________
+			PAPER
 
-        ____
-  _____(__  \_
- (_____
-(______
- (_____
-   (__________
-   PAPER
+  ____			       ____
+_/  __)_____	 _____(__  \_
+     _______)	(_______
+    (__)		     (__)
+    (__)__		   __(__)
+__________)		  (__________
+			ROCK
 
-  ____
-_/  __)_____
-     _______)
-    (__)
-    (__)__
-__________)
-
-       ____
- _____(__  \_
-(_______
-     (__)
-   __(__)
-  (__________
-   ROCK
-
-  ____
-_/  __)_____
-       _____)
-    _________)
-   (___)
-___(__)
-
-        ____
-  _____(__  \_
- (_____
-(_________
-      (___)
-       (__)___
-   SCISSORS
+  ____			        ____
+_/  __)_____	  _____(__  \_
+       _____)	 (_____
+    _________)	(_________
+   (___)		      (___)
+___(__)			       (__)___
+			SCISSORS
 */
+
 /* Displays the help (in a created window and panel, for going back to the normal field after) */
 void Help ()
 {
 	WINDOW *help;
 	PANEL *up;
 
-	help = newwin (12, HELP_WIDTH, 1, 0);
+	help = newwin (14, HELP_WIDTH, 1, 0);
 	up = new_panel (help);
 	update_panels ();
 	doupdate ();
@@ -77,28 +60,32 @@ void Help ()
 	mvwaddstr (help, 0, HELP_WIDTH/2 - 2, "HELP");
 
 	wattron (help, A_BOLD);
-	mvwaddstr (help, 1, 1, "Arrow Keys or A,D:");
+	mvwaddstr (help, 1, 1, "Arrow Keys:");
 	mvwaddstr (help, 2, 1, "Enter or Mouse B1:");
 	mvwaddstr (help, 3, 1, "'r':");
 	mvwaddstr (help, 4, 1, "'p':");
 	mvwaddstr (help, 5, 1, "'s':");
-	mvwaddstr (help, 6, 1, "'q':");
+	mvwaddstr (help, 6, 1, "'c':");
+	mvwaddstr (help, 7, 1, "'a':");
+	mvwaddstr (help, 8, 1, "'q':");
 
-	mvwaddstr (help, 8, 1, "Rock");
-	mvwaddstr (help, 9, 1, "Paper");
-	mvwaddstr (help, 10, 1, "Scissors");
+	mvwaddstr (help, 10, 1, "Rock");
+	mvwaddstr (help, 11, 1, "Paper");
+	mvwaddstr (help, 12, 1, "Scissors");
 
 	wattroff (help, A_BOLD);
-	mvwaddstr (help, 1, 20, "left/right");
+	mvwaddstr (help, 1, 13, "left/right");
 	mvwaddstr (help, 2, 20, "choose");
 	mvwaddstr (help, 3, 6, "Rock");
 	mvwaddstr (help, 4, 6, "Paper");
 	mvwaddstr (help, 5, 6, "Scissors");
-	mvwaddstr (help, 6, 6, "quit");
+	mvwaddstr (help, 6, 6, "change color");
+	mvwaddstr (help, 7, 6, "toggle animations");
+	mvwaddstr (help, 8, 6, "quit");
 
-	mvwaddstr (help, 8, 6, "beats Scissors");
-	mvwaddstr (help, 9, 7, "beats Rock");
-	mvwaddstr (help, 10, 10, "beats Paper");
+	mvwaddstr (help, 10, 6, "beats Scissors");
+	mvwaddstr (help, 11, 7, "beats Rock");
+	mvwaddstr (help, 12, 10, "beat Paper");
 
 
 // writes the help window, wait for some key to be pressed and delete the help window
@@ -322,36 +309,95 @@ void SwitchMove (WINDOW *choices, int i, int color)
 
 
 /* Who won? Who's next? 1 for 'you won', -1 for 'you lost' */
-int Game (char c, int color)
+int Game (char c, int color, char animations)
 {
-	WINDOW *player, *cpu;
+	WINDOW *player, *cpu, *count;
 	char cpu_choice;
+	int i = 3;
 	
+// boxes for showing the moves: yours
 	player = newwin (10, 16, CHOICES_y0 - 1, PLAYER_x0);
 	box (player, 0, 0);
+	mvwaddstr (player, 0, 5, "PLAYER");
 	wrefresh (player);
 	wattrset (player, COLOR_PAIR (color) | A_BOLD);
-	
+// and cpu's
 	cpu = newwin (10, 16, CHOICES_y0 - 1, CPU_x0);
 	box (cpu, 0, 0);
+	mvwaddstr (cpu, 0, 6, "CPU");
 	wattrset (cpu, COLOR_PAIR ((rand () % 8) + 1) | A_BOLD);
 	wrefresh (cpu);
 	
+// random choice for cpu
+	cpu_choice = rand () % 3;
+	if (cpu_choice == 0)
+		cpu_choice = 'r';
+	else if (cpu_choice == 1)
+		cpu_choice = 'p';
+	else
+		cpu_choice = 's';
 	
 	
+// countdown
+	count = newwin (3, 15, CHOICES_y0 + 11, COLS/2 - 7);
+	mvwaddstr (count, 0, 0, "=-=-=-=-=-=-=-=");
+	mvwaddstr (count, 1, 0, "-             -");
+	mvwaddstr (count, 2, 0, "=-=-=-=-=-=-=-=");
+	wrefresh (count);
 	
+	if (animations) {
+		mvwaddstr (count, 1, 0, "-    READY?   -");
+		sleep (1);
+
+// a chance to count from 5 ¿why? Cuz I want =P
+		if (!(rand () % 20))
+			i = 5;
+	
+		for (; i > 0; i--) {
+			mvwprintw (count, 1, 0, "-      %d      -", i);
+			wrefresh (count);
+			sleep (1);
+		}
+		mvwprintw (count, 1, 0, "-     GO!     -", i);
+		wrefresh (count);
+		sleep (1);
+	}
 	
 	getch ();
 	
+	delwin (player);
+	delwin (cpu);
+	delwin (count);
+	
+	move (1, 0);
+	clrtobot ();
+	refresh ();
+	
 	return 0;
 }
+
+
+/* You won! YAY */
+void Winner ()
+{
+
+}
+
+
+/* You lost! Sucka! */
+void Loser ()
+{
+
+}
+
 
 
 
 int main ()
 {
 	unsigned int best_of = 0;
-	int color, c, score_player = 0, score_cpu = 0, move = 0;
+	int color, c, move = 0;
+	char animations = 1;	// player want's the animations? (default = yes)
 	PANEL *panel;
 	WINDOW *hud, *choices;
 	MEVENT event;
@@ -393,6 +439,7 @@ int main ()
 	cbreak ();
 
 	mvwaddstr (hud, 0, 0, "'?': Help");
+	mvwaddstr (hud, 0, COLS - 10, "'c': Color");
 	wrefresh (hud);
 
 	color = Colors ();
@@ -413,8 +460,13 @@ int main ()
 			getmouse (&event);
 			if (event.bstate & BUTTON1_CLICKED) {
 // asked for help?
-				if (wenclose (hud, event.y, event.x) && event.x < 9)
-					c = '?';
+				if (wenclose (hud, event.y, event.x)) {
+					if (event.x < 9)
+						c = '?';
+					else if (event.x >= COLS - 10)
+						c = 'c';
+				}
+				
 // choose a movement; will you win?
 				else if (wenclose (choices, event.y, event.x))
 					c = MouseChoose (choices, event);
@@ -433,18 +485,22 @@ int main ()
 				PrintChoices (choices, color);
 				break;
 				
-			case KEY_LEFT: case 'a':
+			case KEY_LEFT:
 				if (move > 0) {
 					move--;
 					SwitchMove (choices, move, color);
 				}
 				break;
 				
-			case KEY_RIGHT: case 'd':
+			case KEY_RIGHT:
 				if (move < 2) {
 					move++;
 					SwitchMove (choices, move, color);
 				}
+				break;
+				
+			case 'a':
+				animations = !animations;
 				break;
 				
 			case '\n':
@@ -459,12 +515,24 @@ int main ()
 				hide_panel (panel);
 				update_panels ();
 				doupdate ();
-				Game (c, color);
-				show_panel (panel);
-				update_panels ();
-				doupdate ();
+				Game (c, color, animations);
+			}
+		
+		if (player_score == best_of/2 + 1) {
+			
+			Winner ();
+			c = 'q';
 		}
-		addch (c);
+		else if (cpu_score == best_of/2 + 1) {
+			Loser ();
+			c = 'q';
+		}
+// didn't lose nor win, so give player another move choosing
+		else {
+			show_panel (panel);
+			update_panels ();
+			doupdate ();
+		}
 	}
 
 	endwin ();
