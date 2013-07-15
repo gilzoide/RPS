@@ -1,4 +1,4 @@
-// Compile with '-lpanel -lmenu -lncurses'
+// Compile with '-lpanel -lncurses'
 
 #include <ncurses.h>
 #include <panel.h>
@@ -12,6 +12,8 @@
 #define HELP_WIDTH 31
 #define CHOICES_y0 (LINES/2 - 3)
 #define CHOICES_x0 (COLS/2 - 20)
+#define PLAYER_x0 10
+#define CPU_x0 (COLS - 26)
 /*
   ____
 _/  __)_____
@@ -131,6 +133,8 @@ int Colors ()
 	for (i = 1; i < 8; i++)
 		x[i] = x[i - 1] + strlen (colors[i - 1]) + 1;
 
+	standend ();
+
 	mvaddstr (9, 0, "Pick your color >");
 
 	attron (A_BOLD);
@@ -143,7 +147,7 @@ int Colors ()
 	attron (COLOR_PAIR (1) | A_REVERSE);
 	mvaddstr (9, x[i], colors[i]);
 
-	while (1) {
+	while (c != '\n') {
 		c = getch ();
 
 		switch (c) {
@@ -171,25 +175,25 @@ int Colors ()
 				Help ();
 				break;
 
-			case '\n':
-				return i + 1;
-
 			case KEY_MOUSE:
 				getmouse (&event);
-				if (event.bstate & BUTTON1_CLICKED) {
+				if (event.bstate & BUTTON1_CLICKED)
 // if inside the color names area
-					if (event.y == 9 && event.x >= x[0] && event.x < (x[7] + strlen (colors[7]))) {
+					if (event.y == 9 && event.x >= x[0] && event.x < (x[7] + strlen (colors[7])))
 // check: when x is greater than initial x, that's the color
-						for (i = 7; i >= 0; i--) {
+						for (i = 7; i >= 0; i--)
 							if (event.x >= x[i]) {
-								return i + 1;
+								c = '\n';
+								break;
 							}
-						}
-					}
-				}
-
 		}
 	}
+	
+	move (9, 0);
+	clrtoeol ();
+	refresh ();
+	
+	return i + 1;
 }
 
 
@@ -239,7 +243,7 @@ void PrintScissors (WINDOW *win, int y, int x, char reverse)
 		mvwaddstr (win, y + 5, x, "___(__)");
 	}
 	wattrset (win, A_BOLD);
-	mvwaddstr (win, y + 7, x, "   SCISSORS");
+	mvwaddstr (win, y + 7, x, "    SCISSORS");
 
 	wrefresh (win);
 }
@@ -273,20 +277,14 @@ void PrintRock (WINDOW *win, int y, int x, char reverse)
 
 
 /* Create the choices window, that's shown for player to choose his move */
-WINDOW *CreateChoices (int color)
+void PrintChoices (WINDOW *win, int color)
 {
-	WINDOW *win;
-
-	win = newwin (8, 42, CHOICES_y0, CHOICES_x0);
-
 	wattrset (win, COLOR_PAIR (color) | A_BOLD);
 	PrintRock (win, 0, 0, 0);
 	wattrset (win, COLOR_PAIR (color) | A_BOLD);
 	PrintPaper (win, 0, 14, 0);
 	wattrset (win, COLOR_PAIR (color) | A_BOLD);
 	PrintScissors (win, 0, 28, 0);
-
-	return win;
 }
 
 
@@ -302,21 +300,60 @@ char MouseChoose (WINDOW *choices, MEVENT event)
 }
 
 
-/* Who won? Who's next? */
-void Game (char c)
+/* Switch movement choice */
+void SwitchMove (WINDOW *choices, int i, int color)
 {
+	char *move[] = {
+		"ROCK",
+		"PAPER",
+		"SCISSORS"
+	};
 
+	mvwaddstr (choices, 7, 0, "    ROCK          PAPER         SCISSORS");
+	
+	wattrset (choices, COLOR_PAIR (color) | A_REVERSE);
+	
+	mvwaddstr (choices, 7, 4 + (i * 14), move[i]);
+	
+	wattrset (choices, A_BOLD);
+	
+	wrefresh (choices);
+}
+
+
+/* Who won? Who's next? 1 for 'you won', -1 for 'you lost' */
+int Game (char c, int color)
+{
+	WINDOW *player, *cpu;
+	char cpu_choice;
+	
+	player = newwin (10, 16, CHOICES_y0 - 1, PLAYER_x0);
+	box (player, 0, 0);
+	wrefresh (player);
+	wattrset (player, COLOR_PAIR (color) | A_BOLD);
+	
+	cpu = newwin (10, 16, CHOICES_y0 - 1, CPU_x0);
+	box (cpu, 0, 0);
+	wattrset (cpu, COLOR_PAIR ((rand () % 8) + 1) | A_BOLD);
+	wrefresh (cpu);
+	
+	
+	
+	
+	
+	getch ();
+	
+	return 0;
 }
 
 
 
 int main ()
 {
-	char choice;	// 'R'ock, 'P'aper or 'S'cissors
 	unsigned int best_of = 0;
-	int color, c;
+	int color, c, score_player = 0, score_cpu = 0, move = 0;
 	PANEL *panel;
-	WINDOW *hud, *player, *cpu, *choices;
+	WINDOW *hud, *choices;
 	MEVENT event;
 
 	srand (time (NULL));
@@ -364,7 +401,9 @@ int main ()
 	clrtobot ();
 	refresh ();
 
-	choices = CreateChoices (color);
+	choices = newwin (8, 42, CHOICES_y0, CHOICES_x0);
+	PrintChoices (choices, color);
+	SwitchMove (choices, move, color);
 	panel = new_panel (choices);
 
 	while (c != 'q') {
@@ -385,10 +424,45 @@ int main ()
 		switch (c) {
 			case '?':
 				Help ();
+				update_panels ();
+				doupdate ();
 				break;
+				
+			case 'c':
+				color = Colors ();
+				PrintChoices (choices, color);
+				break;
+				
+			case KEY_LEFT: case 'a':
+				if (move > 0) {
+					move--;
+					SwitchMove (choices, move, color);
+				}
+				break;
+				
+			case KEY_RIGHT: case 'd':
+				if (move < 2) {
+					move++;
+					SwitchMove (choices, move, color);
+				}
+				break;
+				
+			case '\n':
+				if (move == 0)
+					c = 'r';
+				else if (move == 1)
+					c = 'p';
+				else if (move == 2)
+					c = 's';
 
 			case 'r': case 's': case 'p':
-				Game (c);
+				hide_panel (panel);
+				update_panels ();
+				doupdate ();
+				Game (c, color);
+				show_panel (panel);
+				update_panels ();
+				doupdate ();
 		}
 		addch (c);
 	}
