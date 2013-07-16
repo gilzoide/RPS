@@ -13,7 +13,9 @@
 #define HELP_WIDTH 37
 #define CHOICES_y0 (LINES/2 - 5)
 #define CHOICES_x0 (COLS/2 - 20)
+#define PLAYER_y0 (CHOICES_y0 - 1)
 #define PLAYER_x0 10
+#define CPU_y0 (CHOICES_y0 - 1)
 #define CPU_x0 (COLS - 26)
 
 int player_score = 0, cpu_score = 0;	// scores
@@ -75,15 +77,21 @@ void Help (int *c)
 	mvwaddstr (help, 11, 1, "Paper");
 	mvwaddstr (help, 12, 1, "Scissors");
 
-	wattroff (help, A_BOLD);
+// mouse clickable
+	wattron (help, A_UNDERLINE);
+	mvwaddstr (help, 6, HELP_WIDTH - 13, "<click here>");
+	mvwaddstr (help, 7, HELP_WIDTH - 13, "<click here>");
+	mvwaddstr (help, 8, HELP_WIDTH - 13, "<click here>");
+
+	wattroff (help, A_BOLD | A_UNDERLINE);
 	mvwaddstr (help, 1, 13, "left/right");
 	mvwaddstr (help, 2, 20, "choose");
 	mvwaddstr (help, 3, 6, "Rock");
 	mvwaddstr (help, 4, 6, "Paper");
 	mvwaddstr (help, 5, 6, "Scissors");
-	mvwaddstr (help, 6, 6, "change color <click here>");
-	mvwaddstr (help, 7, 6, "toggle animations <click here>");
-	mvwaddstr (help, 8, 6, "quit <click here>");
+	mvwaddstr (help, 6, 6, "change color");
+	mvwaddstr (help, 7, 6, "toggle animations");
+	mvwaddstr (help, 8, 6, "quit");
 
 	mvwaddstr (help, 10, 6, "beats Scissors");
 	mvwaddstr (help, 11, 7, "beats Rock");
@@ -124,7 +132,7 @@ void ReScore ()
 
 
 /* Menu for choosing the color */
-int Colors ()
+int Colors (int current)
 {
 	MEVENT event;
 	int i, x[8], c;
@@ -147,14 +155,14 @@ int Colors ()
 
 	mvaddstr (6, 0, "Pick your color >");
 
-	attron (A_BOLD);
-	for (i = 1; i < 8; i++) {
+	attron (A_BOLD | A_UNDERLINE);
+	for (i = 0; i < 8; i++) {
 		attron (COLOR_PAIR (i + 1));
 		mvaddstr (6, x[i], colors[i]);
 	}
 
-	i = 0;
-	attron (COLOR_PAIR (1) | A_REVERSE);
+	i = current - 1;
+	attron (COLOR_PAIR (current) | A_REVERSE);
 	mvaddstr (6, x[i], colors[i]);
 
 	while (c != '\n') {
@@ -331,8 +339,8 @@ void SwitchMove (WINDOW *choices, int i, int color)
 void Game (char player_choice, int color, char animations)
 {
 	WINDOW *player, *cpu, *count;
-	char cpu_choice;
-	int i = 3;
+	char cpu_choice, cpu_color;
+	int i;
 
 // boxes for showing the moves: yours
 	player = newwin (10, 16, CHOICES_y0 - 1, PLAYER_x0);
@@ -344,8 +352,22 @@ void Game (char player_choice, int color, char animations)
 	cpu = newwin (10, 16, CHOICES_y0 - 1, CPU_x0);
 	box (cpu, 0, 0);
 	mvwaddstr (cpu, 0, 6, "CPU");
-	wattrset (cpu, COLOR_PAIR ((rand () % 8) + 1) | A_BOLD);
+	do {
+		cpu_color = (rand () % 8) + 1;
+	} while (cpu_color == color);
+	wattrset (cpu, COLOR_PAIR (cpu_color) | A_BOLD);
 	wrefresh (cpu);
+
+// only 1 point from winning!
+	attron (A_BOLD);
+	if (player_score == best_of/2) {
+		mvaddstr (PLAYER_y0 - 1, PLAYER_x0, "  MATCH POINT!");
+		refresh ();
+	}
+	if (cpu_score == best_of/2) {
+		mvaddstr (CPU_y0 - 1, CPU_x0, "  MATCH POINT!");
+		refresh ();
+	}
 
 // random choice for cpu
 	cpu_choice = rand () % 3;
@@ -358,27 +380,39 @@ void Game (char player_choice, int color, char animations)
 
 
 // countdown
-	count = newwin (3, 15, CHOICES_y0 + 11, COLS/2 - 7);
-	mvwaddstr (count, 0, 0, "=-=-=-=-=-=-=-=");
-	mvwaddstr (count, 1, 0, "-             -");
-	mvwaddstr (count, 2, 0, "=-=-=-=-=-=-=-=");
+	count = newwin (3, 17, CHOICES_y0 + 11, COLS/2 - 8);
+	mvwaddstr (count, 0, 0, "=-=-=-=-=-=-=-=-=");
+	mvwaddstr (count, 1, 0, "-               -");
+	mvwaddstr (count, 2, 0, "=-=-=-=-=-=-=-=-=");
 
 // with animations it's even cooler! [but takes a while, so sometimes it annoyes]
 	if (animations) {
-		mvwaddstr (count, 1, 0, "-    READY?   -");
+		mvwaddstr (count, 1, 0, "-     READY?    -");
 		wrefresh (count);
 		sleep (1);
 
-// a chance to count from 5 ¿why? Cuz I want =P
+// a chance to count from 5 ¿why? Cuz I want so =P
 		if (!(rand () % 20))
 			i = 5;
+		else
+			i = 3;
 
 		for (; i > 0; i--) {
-			mvwprintw (count, 1, 0, "-      %d      -", i);
+			mvwprintw (count, 1, 0, "-       %d       -", i);
 			wrefresh (count);
 			sleep (1);
+
+// chance to forget counting =P
+			if (!(rand () % 20)) {
+				mvwprintw (count, 1, 0, "-WHAT'S AFTER %d?-", i);
+				wrefresh (count);
+				sleep (2);
+				mvwprintw (count, 1, 0, "- OH, I GOT IT! -");
+				wrefresh (count);
+				usleep (13e5);
+			}
 		}
-		mvwprintw (count, 1, 0, "-     GO!     -", i);
+		mvwprintw (count, 1, 0, "-      GO!      -", i);
 		wrefresh (count);
 	}
 
@@ -390,18 +424,18 @@ void Game (char player_choice, int color, char animations)
 
 // you won!
 	if ((player_choice == 'r' && cpu_choice == 's') || (player_choice == 'p' && cpu_choice == 'r') || (player_choice == 's' && cpu_choice == 'p')) {
-		mvwaddstr (count, 1, 0, "-   YOU WON!  -");
+		mvwaddstr (count, 1, 0, "-    YOU WON!   -");
 		wrefresh (count);
 		player_score++;
 	}
 // tie
 	else if (player_choice == cpu_choice) {
-		mvwaddstr (count, 1, 0, "-     TIE     -");
+		mvwaddstr (count, 1, 0, "-      TIE      -");
 		wrefresh (count);
 	}
 // you lost
 	else {
-		mvwaddstr (count, 1, 0, "-  YOU LOST!  -");
+		mvwaddstr (count, 1, 0, "-   YOU LOST!   -");
 		wrefresh (count);
 		cpu_score++;
 	}
@@ -440,7 +474,7 @@ void Loser ()
 
 int main ()
 {
-	int color, c, move = 0;
+	int color = 1, c, move = 0;
 	char animations = 1;	// player want's the animations? (default = yes)
 	PANEL *panel;
 	WINDOW *hud, *choices;
@@ -482,8 +516,9 @@ int main ()
 	noecho ();
 	cbreak ();
 
-	color = Colors ();
+	color = Colors (color);
 
+	wattron (hud, A_UNDERLINE);
 	mvwaddstr (hud, 0, 0, "'?': Help");
 	wrefresh (hud);
 
@@ -527,7 +562,7 @@ int main ()
 				break;
 
 			case 'c':
-				color = Colors ();
+				color = Colors (color);
 				PrintChoices (choices, color);
 
 				break;
@@ -552,7 +587,15 @@ int main ()
 				else if (move == 2)
 					c = 's';
 
-			case 'r': case 's': case 'p':
+			case 'r':
+				move = 0;
+			case 'p':
+				if (c == 'p')
+					move = 1;
+			case 's':
+				if (c == 's')
+					move = 2;
+// Round!
 				hide_panel (panel);
 				update_panels ();
 				doupdate ();
