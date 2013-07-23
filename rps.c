@@ -9,6 +9,8 @@
 
 #define BGhud 10
 #define BGhelp 11
+#define FGred 3
+#define FGyellow 4
 
 #define HELP_WIDTH 37
 #define CHOICES_y0 (LINES/2 - 5)
@@ -64,13 +66,13 @@ void Help (int *c)
 	mvwaddstr (help, 0, HELP_WIDTH/2 - 2, "HELP");
 
 	wattron (help, A_BOLD);
-	mvwaddstr (help, 1, 1, "Arrow Keys:");
+	mvwaddstr (help, 1, 1, "Arrow Keys or A,D:");
 	mvwaddstr (help, 2, 1, "Enter or Mouse B1:");
 	mvwaddstr (help, 3, 1, "'r':");
 	mvwaddstr (help, 4, 1, "'p':");
 	mvwaddstr (help, 5, 1, "'s':");
 	mvwaddstr (help, 6, 1, "'c':");
-	mvwaddstr (help, 7, 1, "'a':");
+	mvwaddstr (help, 7, 1, "Tab:");
 	mvwaddstr (help, 8, 1, "'q':");
 
 	mvwaddstr (help, 10, 1, "Rock");
@@ -84,7 +86,7 @@ void Help (int *c)
 	mvwaddstr (help, 8, HELP_WIDTH - 13, "<click here>");
 
 	wattroff (help, A_BOLD | A_UNDERLINE);
-	mvwaddstr (help, 1, 13, "left/right");
+	mvwaddstr (help, 1, 20, "left/right");
 	mvwaddstr (help, 2, 20, "choose");
 	mvwaddstr (help, 3, 6, "Rock");
 	mvwaddstr (help, 4, 6, "Paper");
@@ -106,7 +108,7 @@ void Help (int *c)
 			if (event.y == 6)
 				*c = 'c';
 			else if (event.y == 7)
-				*c = 'a';
+				*c = '\t';
 			else if (event.y == 8)
 				*c = 'q';
 		}
@@ -215,6 +217,53 @@ int Colors (int current)
 void PrintMovement (WINDOW *win, int y, int x, char type, char reverse)
 {
 	switch (type) {
+// unprint, for the closed fist
+		case 0:
+			mvwaddstr (win, y, x,     "              ");
+			mvwaddstr (win, y + 1, x, "              ");
+			mvwaddstr (win, y + 2, x, "              ");
+			mvwaddstr (win, y + 3, x, "              ");
+			mvwaddstr (win, y + 4, x, "              ");
+			mvwaddstr (win, y + 5, x, "              ");
+			break;
+// Rocketry! [print the rocket part and a closed fist =P]
+		case 'R':
+			if (reverse) {
+				mvwaddstr (win, y + 1, x + 12, "/|");
+				mvwaddstr (win, y + 2, x + 12, "||");
+				mvwaddstr (win, y + 3, x + 12, "||");
+				mvwaddstr (win, y + 4, x + 12, "||");
+				mvwaddstr (win, y + 5, x + 12, "||");
+				mvwaddstr (win, y + 6, x + 12, "\\|");
+			}
+			else {
+				mvwaddstr (win, y + 1, x, " |\\");
+				mvwaddstr (win, y + 2, x, " ||");
+				mvwaddstr (win, y + 3, x, " ||");
+				mvwaddstr (win, y + 4, x, " ||");
+				mvwaddstr (win, y + 5, x, " ||");
+				mvwaddstr (win, y + 6, x, " |/");
+			}
+// closed fist
+		case 'c':
+			if (reverse) {
+				mvwaddstr (win, y, x,     "      ____");
+				mvwaddstr (win, y + 1, x, "     (__  \\_");
+				mvwaddstr (win, y + 2, x, "    (__)");
+				mvwaddstr (win, y + 3, x, "    (__)");
+				mvwaddstr (win, y + 4, x, "    (__)");
+				mvwaddstr (win, y + 5, x, "    (__)____");
+			}
+			else {
+				mvwaddstr (win, y, x,     "     ____");
+				mvwaddstr (win, y + 1, x, "   _/  __)");
+				mvwaddstr (win, y + 2, x, "       (__)");
+				mvwaddstr (win, y + 3, x, "       (__)");
+				mvwaddstr (win, y + 4, x, "       (__)");
+				mvwaddstr (win, y + 5, x, "   ____(__)");
+			}
+			break;
+// rock
 		case 'r':
 			if (reverse) {
 				mvwaddstr (win, y, x,     "       ____");
@@ -223,7 +272,6 @@ void PrintMovement (WINDOW *win, int y, int x, char type, char reverse)
 				mvwaddstr (win, y + 3, x, "     (__)");
 				mvwaddstr (win, y + 4, x, "   __(__)");
 				mvwaddstr (win, y + 5, x, "  (__________");
-
 			}
 			else {
 				mvwaddstr (win, y, x,     "  ____");
@@ -234,9 +282,9 @@ void PrintMovement (WINDOW *win, int y, int x, char type, char reverse)
 				mvwaddstr (win, y + 5, x, "__________)");
 			}
 			wattrset (win, A_BOLD);
-			mvwaddstr (win, y + 7, x, "    ROCK");
+			mvwaddstr (win, y + 7, x,     "    ROCK");
 			break;
-
+// paper
 		case 'p':
 			if (reverse) {
 				mvwaddstr (win, y, x,     "        ____");
@@ -255,9 +303,9 @@ void PrintMovement (WINDOW *win, int y, int x, char type, char reverse)
 				mvwaddstr (win, y + 5, x, "__________)");
 			}
 			wattrset (win, A_BOLD);
-			mvwaddstr (win, y + 7, x, "    PAPER");
+			mvwaddstr (win, y + 7, x,     "    PAPER");
 			break;
-
+// scissors
 		case 's':
 			if (reverse) {
 				mvwaddstr (win, y, x,     "        ____");
@@ -276,7 +324,7 @@ void PrintMovement (WINDOW *win, int y, int x, char type, char reverse)
 				mvwaddstr (win, y + 5, x, "___(__)");
 			}
 			wattrset (win, A_BOLD);
-			mvwaddstr (win, y + 7, x, "    SCISSORS");
+			mvwaddstr (win, y + 7, x,     "    SCISSORS");
 			break;
 	}
 
@@ -335,8 +383,44 @@ void SwitchMove (WINDOW *choices, int i, int color)
 }
 
 
-/* Who won? Who's next? 1 for 'you won', -1 for 'you lost' */
-void Game (char player_choice, int color, char animations)
+/* You won! YAY */
+void Winner (WINDOW *player, WINDOW *cpu, int player_color)
+{
+	int i, j;
+
+	for (i = PLAYER_x0; i < CPU_x0; i++) {
+		attrset (COLOR_PAIR (player_color) | A_BOLD);
+		PrintMovement (stdscr, PLAYER_y0, i, 'R', 0);
+// rocket fire [first red]
+		attron (COLOR_PAIR (FGred));
+		for (j = 1; j <= 6; j++) {
+			mvaddch (PLAYER_y0 + j, i, '<');
+		}
+		refresh ();
+		usleep (5e5);
+// then yellow
+		attron (COLOR_PAIR (FGyellow));
+		for (j = 1; j <= 6; j++) {
+			mvaddch (PLAYER_y0 + j, i, '<');
+		}
+		refresh ();
+		usleep (5e5);
+	}
+	
+	nodelay (stdscr, FALSE);
+	getch ();
+}
+
+
+/* You lost! Sucka! */
+void Loser ()
+{
+
+}
+
+
+/* Who won? Who's next? */
+void Game (char player_choice, int player_color, char animations)
 {
 	WINDOW *player, *cpu, *count;
 	char cpu_choice, cpu_color;
@@ -346,17 +430,17 @@ void Game (char player_choice, int color, char animations)
 	player = newwin (10, 16, CHOICES_y0 - 1, PLAYER_x0);
 	box (player, 0, 0);
 	mvwaddstr (player, 0, 5, "PLAYER");
-	wrefresh (player);
-	wattrset (player, COLOR_PAIR (color) | A_BOLD);
+	wattrset (player, COLOR_PAIR (player_color) | A_BOLD);
+	PrintMovement (player, 1, 1, 'c', 0);
 // and cpu's
 	cpu = newwin (10, 16, CHOICES_y0 - 1, CPU_x0);
 	box (cpu, 0, 0);
 	mvwaddstr (cpu, 0, 6, "CPU");
 	do {
 		cpu_color = (rand () % 8) + 1;
-	} while (cpu_color == color);
+	} while (cpu_color == player_color);
 	wattrset (cpu, COLOR_PAIR (cpu_color) | A_BOLD);
-	wrefresh (cpu);
+	PrintMovement (cpu, 1, 1, 'c', 1);
 
 // only 1 point from winning!
 	attron (A_BOLD);
@@ -398,9 +482,21 @@ void Game (char player_choice, int color, char animations)
 			i = 3;
 
 		for (; i > 0; i--) {
+// shake hands [closed fists]
+			PrintMovement (player, 1, 1, 0, 0);
+			PrintMovement (cpu, 1, 1, 0, 1);
+			PrintMovement (player, 2, 1, 'c', 0);
+			PrintMovement (cpu, 2, 1, 'c', 1);
+// count
 			mvwprintw (count, 1, 0, "-       %d       -", i);
 			wrefresh (count);
-			sleep (1);
+			usleep (5e5);
+
+			PrintMovement (player, 2, 1, 0, 0);
+			PrintMovement (cpu, 2, 1, 0, 1);
+			PrintMovement (player, 1, 1, 'c', 0);
+			PrintMovement (cpu, 1, 1, 'c', 1);
+			usleep (5e5);
 
 // chance to forget counting =P
 			if (!(rand () % 20)) {
@@ -409,12 +505,15 @@ void Game (char player_choice, int color, char animations)
 				sleep (2);
 				mvwprintw (count, 1, 0, "- OH, I GOT IT! -");
 				wrefresh (count);
-				usleep (13e5);
+				sleep (1);
 			}
 		}
 		mvwprintw (count, 1, 0, "-      GO!      -", i);
 		wrefresh (count);
 	}
+
+	PrintMovement (player, 1, 1, 0, 0);
+	PrintMovement (cpu, 1, 1, 0, 1);
 
 	PrintMovement (player, 1, 1, player_choice, 0);
 	PrintMovement (cpu, 1, 1, cpu_choice, 1);
@@ -442,6 +541,13 @@ void Game (char player_choice, int color, char animations)
 
 	ReScore ();
 
+// won the battle!
+	if (player_score == best_of/2 + 1)
+		Winner (player, cpu, player_color);
+// or lost it =/
+	else if (cpu_score == best_of/2 + 1)
+		Loser (player, cpu);
+
 	getch ();
 
 	delwin (player);
@@ -453,20 +559,6 @@ void Game (char player_choice, int color, char animations)
 	refresh ();
 
 	ReScore ();
-}
-
-
-/* You won! YAY */
-void Winner ()
-{
-
-}
-
-
-/* You lost! Sucka! */
-void Loser ()
-{
-
 }
 
 
@@ -557,23 +649,22 @@ int main ()
 		}
 
 		switch (c) {
-			case 'a':
+			case '\t':
 				animations = !animations;
 				break;
 
 			case 'c':
 				color = Colors (color);
 				PrintChoices (choices, color);
-
 				break;
 
-			case KEY_LEFT:
+			case KEY_LEFT: case 'a':
 				if (move > 0) {
 					move--;
 				}
 				break;
 
-			case KEY_RIGHT:
+			case KEY_RIGHT: case 'd':
 				if (move < 2) {
 					move++;
 				}
@@ -602,12 +693,7 @@ int main ()
 				Game (c, color, animations);
 		}
 
-		if (player_score == best_of/2 + 1) {
-			Winner ();
-			c = 'q';
-		}
-		else if (cpu_score == best_of/2 + 1) {
-			Loser ();
+		if (player_score == best_of/2 + 1 || cpu_score == best_of/2 + 1) {
 			c = 'q';
 		}
 // didn't lose nor win, so give player another move choosing
