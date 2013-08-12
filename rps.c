@@ -1,3 +1,5 @@
+#define CPU_SCISSORS
+
 // Compile with '-lpanel -lncurses'
 
 #include <ncurses.h>
@@ -255,12 +257,12 @@ void PrintMovement (WINDOW *win, int y, int x, char type, char reverse)
 				mvwaddstr (win, y + 5, x, "    (__)____");
 			}
 			else {
-				mvwaddstr (win, y, x,     "     ____");
-				mvwaddstr (win, y + 1, x, "   _/  __)");
-				mvwaddstr (win, y + 2, x, "       (__)");
-				mvwaddstr (win, y + 3, x, "       (__)");
-				mvwaddstr (win, y + 4, x, "       (__)");
-				mvwaddstr (win, y + 5, x, "   ____(__)");
+				mvwaddstr (win, y, x + 3,     "  ____");
+				mvwaddstr (win, y + 1, x + 3, "_/  __)");
+				mvwaddstr (win, y + 2, x + 3, "    (__)");
+				mvwaddstr (win, y + 3, x + 3, "    (__)");
+				mvwaddstr (win, y + 4, x + 3, "    (__)");
+				mvwaddstr (win, y + 5, x + 3, "____(__)");
 			}
 			break;
 // rock
@@ -387,24 +389,49 @@ void SwitchMove (WINDOW *choices, int i, int color)
 void Winner (WINDOW *player, WINDOW *cpu, int player_color)
 {
 	int i, j;
-
-	for (i = PLAYER_x0; i < CPU_x0; i++) {
-		attrset (COLOR_PAIR (player_color) | A_BOLD);
-		PrintMovement (stdscr, PLAYER_y0, i, 'R', 0);
+	
+	
+	attrset (COLOR_PAIR (player_color) | A_BOLD);
+	PrintMovement (stdscr, PLAYER_y0 + 1, PLAYER_x0, 0, 0);
+	PrintMovement (stdscr, PLAYER_y0 + 1, PLAYER_x0, 'R', 0);
+	for (i = 0; i < 7; ++i) {
 // rocket fire [first red]
 		attron (COLOR_PAIR (FGred));
 		for (j = 1; j <= 6; j++) {
-			mvaddch (PLAYER_y0 + j, i, '<');
+			mvaddch (PLAYER_y0 + 1 + j, PLAYER_x0, '<');
 		}
 		refresh ();
-		usleep (5e5);
+		usleep (1e5);
 // then yellow
 		attron (COLOR_PAIR (FGyellow));
 		for (j = 1; j <= 6; j++) {
-			mvaddch (PLAYER_y0 + j, i, '<');
+			mvaddch (PLAYER_y0 + 1 + j, PLAYER_x0, '<');
 		}
 		refresh ();
-		usleep (5e5);
+		usleep (1e5);
+	}
+	
+	for (i = PLAYER_x0; i < CPU_x0; i++) {
+		attrset (COLOR_PAIR (player_color) | A_BOLD);
+		PrintMovement (stdscr, PLAYER_y0 + 1, i, 'R', 0);
+// rocket fire [first red]
+		attron (COLOR_PAIR (FGred));
+		for (j = 1; j <= 6; j++) {
+			mvaddch (PLAYER_y0 + 1 + j, i, '<');
+		}
+		refresh ();
+		usleep (1e5);
+// then yellow
+		attron (COLOR_PAIR (FGyellow));
+		for (j = 1; j <= 6; j++) {
+			mvaddch (PLAYER_y0 + 1 + j, i, '<');
+		}
+		refresh ();
+		usleep (1e5);
+		
+		for (j = 1; j <= 6; j++) {
+			mvaddch (PLAYER_y0 + 1 + j, i, ' ');
+		}
 	}
 	
 	nodelay (stdscr, FALSE);
@@ -453,6 +480,7 @@ void Game (char player_choice, int player_color, char animations)
 		refresh ();
 	}
 
+#ifndef CPU_SCISSORS
 // random choice for cpu
 	cpu_choice = rand () % 3;
 	if (cpu_choice == 0)
@@ -461,6 +489,10 @@ void Game (char player_choice, int player_color, char animations)
 		cpu_choice = 'p';
 	else
 		cpu_choice = 's';
+#endif
+#ifdef CPU_SCISSORS
+	cpu_choice = 's';
+#endif
 
 
 // countdown
@@ -476,7 +508,7 @@ void Game (char player_choice, int player_color, char animations)
 		sleep (1);
 
 // a chance to count from 5 ¿why? Cuz I want so =P
-		if (!(rand () % 20))
+		if (!(rand () % 30))
 			i = 5;
 		else
 			i = 3;
@@ -499,7 +531,7 @@ void Game (char player_choice, int player_color, char animations)
 			usleep (5e5);
 
 // chance to forget counting =P
-			if (!(rand () % 20)) {
+			if (!(rand () % 40)) {
 				mvwprintw (count, 1, 0, "-WHAT'S AFTER %d?-", i);
 				wrefresh (count);
 				sleep (2);
