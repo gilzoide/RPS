@@ -228,15 +228,15 @@ void PrintMovement (WINDOW *win, int y, int x, char type, char reverse)
 			mvwaddstr (win, y + 4, x, "              ");
 			mvwaddstr (win, y + 5, x, "              ");
 			break;
-// Rocketry! [print the rocket part and a closed fist =P]
+// Rocketry! [print the rocket part and a closed fist, no break =P]
 		case 'R':
 			if (reverse) {
-				mvwaddstr (win, y + 1, x + 12, "/|");
-				mvwaddstr (win, y + 2, x + 12, "||");
-				mvwaddstr (win, y + 3, x + 12, "||");
-				mvwaddstr (win, y + 4, x + 12, "||");
-				mvwaddstr (win, y + 5, x + 12, "||");
-				mvwaddstr (win, y + 6, x + 12, "\\|");
+				mvwaddstr (win, y + 1, x + 12, "/| ");
+				mvwaddstr (win, y + 2, x + 12, "|| ");
+				mvwaddstr (win, y + 3, x + 12, "|| ");
+				mvwaddstr (win, y + 4, x + 12, "|| ");
+				mvwaddstr (win, y + 5, x + 12, "|| ");
+				mvwaddstr (win, y + 6, x + 12, "\\| ");
 			}
 			else {
 				mvwaddstr (win, y + 1, x, " |\\");
@@ -249,12 +249,12 @@ void PrintMovement (WINDOW *win, int y, int x, char type, char reverse)
 // closed fist
 		case 'c':
 			if (reverse) {
-				mvwaddstr (win, y, x,     "      ____");
-				mvwaddstr (win, y + 1, x, "     (__  \\_");
-				mvwaddstr (win, y + 2, x, "    (__)");
-				mvwaddstr (win, y + 3, x, "    (__)");
-				mvwaddstr (win, y + 4, x, "    (__)");
-				mvwaddstr (win, y + 5, x, "    (__)____");
+				mvwaddstr (win, y, x + 6,       "____ ");
+				mvwaddstr (win, y + 1, x + 5,  "(__  \\_");
+				mvwaddstr (win, y + 2, x + 4, "(__) ");
+				mvwaddstr (win, y + 3, x + 4, "(__) ");
+				mvwaddstr (win, y + 4, x + 4, "(__) ");
+				mvwaddstr (win, y + 5, x + 4, "(__)____");
 			}
 			else {
 				mvwaddstr (win, y, x + 3,     "  ____");
@@ -364,7 +364,7 @@ char MouseChoose (WINDOW *choices, MEVENT event, int *move)
 }
 
 
-/* Switch movement choice */
+/* Switch movement choice color */
 void SwitchMove (WINDOW *choices, int i, int color)
 {
 	char *move[] = {
@@ -390,9 +390,10 @@ void Winner (WINDOW *player, WINDOW *cpu, int player_color)
 {
 	int i, j;
 	
+	sleep (1);
 	
 	attrset (COLOR_PAIR (player_color) | A_BOLD);
-	PrintMovement (stdscr, PLAYER_y0 + 1, PLAYER_x0, 0, 0);
+	PrintMovement (stdscr, PLAYER_y0 + 1, PLAYER_x0 + 1, 0, 0);
 	PrintMovement (stdscr, PLAYER_y0 + 1, PLAYER_x0, 'R', 0);
 	for (i = 0; i < 7; ++i) {
 // rocket fire [first red]
@@ -401,17 +402,17 @@ void Winner (WINDOW *player, WINDOW *cpu, int player_color)
 			mvaddch (PLAYER_y0 + 1 + j, PLAYER_x0, '<');
 		}
 		refresh ();
-		usleep (1e5);
+		usleep (6e4);
 // then yellow
 		attron (COLOR_PAIR (FGyellow));
 		for (j = 1; j <= 6; j++) {
 			mvaddch (PLAYER_y0 + 1 + j, PLAYER_x0, '<');
 		}
 		refresh ();
-		usleep (1e5);
+		usleep (6e4);
 	}
 	
-	for (i = PLAYER_x0; i < CPU_x0; i++) {
+	for (i = PLAYER_x0; i < CPU_x0 + 6; i++) {
 		attrset (COLOR_PAIR (player_color) | A_BOLD);
 		PrintMovement (stdscr, PLAYER_y0 + 1, i, 'R', 0);
 // rocket fire [first red]
@@ -420,14 +421,14 @@ void Winner (WINDOW *player, WINDOW *cpu, int player_color)
 			mvaddch (PLAYER_y0 + 1 + j, i, '<');
 		}
 		refresh ();
-		usleep (1e5);
+		usleep (6e4);
 // then yellow
 		attron (COLOR_PAIR (FGyellow));
 		for (j = 1; j <= 6; j++) {
 			mvaddch (PLAYER_y0 + 1 + j, i, '<');
 		}
 		refresh ();
-		usleep (1e5);
+		usleep (6e4);
 		
 		for (j = 1; j <= 6; j++) {
 			mvaddch (PLAYER_y0 + 1 + j, i, ' ');
@@ -435,14 +436,60 @@ void Winner (WINDOW *player, WINDOW *cpu, int player_color)
 	}
 	
 	nodelay (stdscr, FALSE);
-	getch ();
 }
 
 
 /* You lost! Sucka! */
-void Loser ()
+void Loser (WINDOW *player, WINDOW *cpu, int cpu_color)
 {
-
+	int i, j;
+	
+	sleep (1);
+	
+	attrset (COLOR_PAIR (cpu_color) | A_BOLD);
+	PrintMovement (stdscr, CPU_y0 + 1, CPU_x0 + 1, 0, 0);
+	PrintMovement (stdscr, CPU_y0 + 1, CPU_x0, 'R', 1);
+	for (i = 0; i < 7; ++i) {
+// rocket fire [first red]
+		attron (COLOR_PAIR (FGred));
+		for (j = 1; j <= 6; j++) {
+			mvaddch (CPU_y0 + 1 + j, CPU_x0 + 14, '>');
+		}
+		refresh ();
+		usleep (6e4);
+// then yellow
+		attron (COLOR_PAIR (FGyellow));
+		for (j = 1; j <= 6; j++) {
+			mvaddch (CPU_y0 + 1 + j, CPU_x0 + 14, '>');
+		}
+		refresh ();
+		usleep (6e4);
+	}
+	
+	for (i = CPU_x0; i > PLAYER_x0 - 5; i--) {
+		attrset (COLOR_PAIR (cpu_color) | A_BOLD);
+		PrintMovement (stdscr, CPU_y0 + 1, i, 'R', 1);
+// rocket fire [first red]
+		attron (COLOR_PAIR (FGred));
+		for (j = 1; j <= 6; j++) {
+			mvaddch (CPU_y0 + 1 + j, i + 14, '>');
+		}
+		refresh ();
+		usleep (6e4);
+// then yellow
+		attron (COLOR_PAIR (FGyellow));
+		for (j = 1; j <= 6; j++) {
+			mvaddch (CPU_y0 + 1 + j, i + 14, '>');
+		}
+		refresh ();
+		usleep (6e4);
+		
+		for (j = 1; j <= 6; j++) {
+			mvaddch (CPU_y0 + 1 + j, i + 14, ' ');
+		}
+	}
+	
+	nodelay (stdscr, FALSE);
 }
 
 
@@ -578,7 +625,7 @@ void Game (char player_choice, int player_color, char animations)
 		Winner (player, cpu, player_color);
 // or lost it =/
 	else if (cpu_score == best_of/2 + 1)
-		Loser (player, cpu);
+		Loser (player, cpu, cpu_color);
 
 	getch ();
 
