@@ -5,3 +5,6 @@ all : rps.c
 
 run : rps.c RPS
 	@./RPS
+
+commit : .git
+	@git commit -a && git push
